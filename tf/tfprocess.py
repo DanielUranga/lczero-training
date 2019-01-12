@@ -22,6 +22,7 @@ import random
 import tensorflow as tf
 import time
 import bisect
+import lc0_az_policy_map
 
 from net import Net
 
@@ -490,7 +491,7 @@ class TFProcess:
         self.save_leelaz_weights(filename)
         self.snap_restore()
 
-    def save_leelaz_weights(self, filename):
+    def save_leelaz_weights_proto(self, filename):
         all_weights = []
         for e, weights in enumerate(self.weights):
             work_weights = None
@@ -530,6 +531,46 @@ class TFProcess:
 
         self.net.fill_net(all_weights)
         self.net.save_proto(filename)
+
+    def save_leelaz_weights(self, filename):
+        with open(filename + '.txt', 'w') as f:
+            f.write("4\n") # Version
+            for e, weights in enumerate(self.weights):
+                # Newline unless last line (single bias)
+                work_weights = None
+                if weights.shape.ndims == 4:
+                    # Convolution weights need a transpose
+                    #
+                    # TF (kYXInputOutput)
+                    # [filter_height, filter_width, in_channels, out_channels]
+                    #
+                    # Leela/cuDNN/Caffe (kOutputInputYX)
+                    # [output, input, filter_size, filter_size]
+                    work_weights = tf.transpose(weights, [3, 2, 0, 1])
+                elif weights.shape.ndims == 2:
+                    # Fully connected layers are [in, out] in TF
+                    #
+                    # [out, in] in Leela
+                    #
+                    work_weights = tf.transpose(weights, [1, 0])
+                else:
+                    # Biases, batchnorm etc
+                    work_weights = weights
+                nparray = work_weights.eval(session=self.session)
+                # Rescale rule50 related weights as clients do not normalize the input.
+                if e == 0:
+                    num_inputs = 112
+                    # 50 move rule is the 110th input, or 109 starting from 0.
+                    rule50_input = 109
+                    wt_flt = []
+                    for i, weight in enumerate(np.ravel(nparray)):
+                        if (i%(num_inputs*9))//9 == rule50_input:
+                            wt_flt.append(weight/99)
+                        else:
+                            wt_flt.append(weight)
+                else:
+                    wt_flt = [wt for wt in np.ravel(nparray)]
+                f.write(" ".join([str(x) for x in wt_flt]) + '\n')
 
     def get_batchnorm_key(self):
         result = "bn" + str(self.batch_norm_count)
@@ -685,15 +726,22 @@ class TFProcess:
             flow = self.residual_block(flow, self.RESIDUAL_FILTERS)
 
         # Policy head
-        conv_pol = self.conv_block(flow, filter_size=1,
+        conv_pol = self.conv_block(flow, filter_size=3,
                                    input_channels=self.RESIDUAL_FILTERS,
-                                   output_channels=32)
-        h_conv_pol_flat = tf.reshape(conv_pol, [-1, 32*8*8])
-        W_fc1 = weight_variable([32*8*8, 1858], name='fc1/weight')
-        b_fc1 = bias_variable([1858], name='fc1/bias')
-        self.weights.append(W_fc1)
-        self.weights.append(b_fc1)
-        h_fc1 = tf.add(tf.matmul(h_conv_pol_flat, W_fc1), b_fc1, name='policy_head')
+                                   output_channels=self.RESIDUAL_FILTERS)
+        W_pol_conv = weight_variable([3, 3,
+                                  self.RESIDUAL_FILTERS, 80], name='W_pol_conv2')
+        b_pol_conv = bias_variable([80], name='b_pol_conv2')
+        self.weights.append(W_pol_conv)
+        self.weights.append(b_pol_conv)
+        conv_pol2 = tf.nn.bias_add(conv2d(conv_pol, W_pol_conv), b_pol_conv, data_format='NCHW')
+
+        h_conv_pol_flat = tf.reshape(conv_pol2, [-1, 80*8*8])
+        fc1_init = tf.constant(lc0_az_policy_map.make_map())
+        W_fc1 = tf.get_variable("policy_map",
+                                 initializer=fc1_init,
+                                 trainable=False)
+        h_fc1 = tf.matmul(h_conv_pol_flat, W_fc1, name='policy_head')
 
         # Value head
         conv_val = self.conv_block(flow, filter_size=1,
