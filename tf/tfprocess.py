@@ -42,7 +42,6 @@ def weight_variable(shape, name=None):
     stddev = trunc_correction * np.sqrt(2.0 / (fan_in + fan_out))
     initial = tf.truncated_normal(shape, stddev=stddev)
     weights = tf.Variable(initial, name=name)
-    tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, weights)
     return weights
 
 # Bias weights for layers not followed by BatchNorm
@@ -643,7 +642,7 @@ class TFProcess:
         self.batch_norm_count += 1
         return result
 
-    def batch_norm(self, inputs, scale=False):
+    def batch_norm(self, inputs):
         if self.renorm_enabled:
             clipping = {
                 "rmin": 1.0/self.renorm_max_r,
@@ -652,18 +651,18 @@ class TFProcess:
                 }
             return tf.layers.batch_normalization(
                 inputs, epsilon=1e-5, axis=1, fused=True,
-                center=True, scale=scale,
+                center=True, scale=True,
                 renorm=True, renorm_clipping=clipping,
                 renorm_momentum=self.renorm_momentum,
                 training=self.training)
         else:
             return tf.layers.batch_normalization(
                 inputs, epsilon=1e-5, axis=1, fused=True,
-                center=True, scale=scale,
+                center=True, scale=True,
                 virtual_batch_size=64,
                 training=self.training)
 
-    def conv_block(self, inputs, filter_size, input_channels, output_channels, bn_scale=False):
+    def conv_block(self, inputs, filter_size, input_channels, output_channels):
         # The weights are internal to the batchnorm layer, so apply
         # a unique scope that we can store, and use to look them back up
         # later on.
@@ -673,7 +672,7 @@ class TFProcess:
                                   input_channels, output_channels], name=conv_key)
 
         with tf.variable_scope(weight_key):
-            h_bn = self.batch_norm(conv2d(inputs, W_conv), scale=bn_scale)
+            h_bn = self.batch_norm(conv2d(inputs, W_conv))
         h_conv = tf.nn.relu(h_bn)
 
         beta_key = weight_key + "/batch_normalization/beta:0"
@@ -707,7 +706,7 @@ class TFProcess:
             h_bn1 = self.batch_norm(conv2d(inputs, W_conv_1))
         h_out_1 = tf.nn.relu(h_bn1)
         with tf.variable_scope(weight_key_2):
-            h_bn2 = self.batch_norm(conv2d(h_out_1, W_conv_2), scale=True)
+            h_bn2 = self.batch_norm(conv2d(h_out_1, W_conv_2))
         h_out_2 = tf.nn.relu(tf.add(h_bn2, orig))
 
         beta_key_1 = weight_key_1 + "/batch_normalization/beta:0"
@@ -746,8 +745,7 @@ class TFProcess:
         # Input convolution
         flow = self.conv_block(x_planes, filter_size=3,
                                input_channels=112,
-                               output_channels=self.RESIDUAL_FILTERS,
-                               bn_scale=True)
+                               output_channels=self.RESIDUAL_FILTERS)
         # Residual tower
         for _ in range(0, self.RESIDUAL_BLOCKS):
             flow = self.residual_block(flow, self.RESIDUAL_FILTERS)
@@ -761,7 +759,6 @@ class TFProcess:
                                           self.RESIDUAL_FILTERS, 80], name='W_pol_conv2')
             b_pol_conv = bias_variable([80], name='b_pol_conv2')
             self.weights.append(W_pol_conv)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_pol_conv)
             self.weights.append(b_pol_conv)
             conv_pol2 = tf.nn.bias_add(
                 conv2d(conv_pol, W_pol_conv), b_pol_conv, data_format='NCHW')
@@ -782,7 +779,6 @@ class TFProcess:
                 [self.policy_channels*8*8, 1858], name='fc1/weight')
             b_fc1 = bias_variable([1858], name='fc1/bias')
             self.weights.append(W_fc1)
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc1)
             self.weights.append(b_fc1)
             h_fc1 = tf.add(tf.matmul(h_conv_pol_flat, W_fc1),
                            b_fc1, name='policy_head')
@@ -808,8 +804,5 @@ class TFProcess:
         h_fc3 = tf.add(tf.matmul(h_fc2, W_fc3), b_fc3, name='value_head')
         if not self.wdl:
             h_fc3 = tf.nn.tanh(h_fc3)
-        else:
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc3)
-
 
         return h_fc1, h_fc3
