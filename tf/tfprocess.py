@@ -708,6 +708,7 @@ class TFProcess:
         h_out_1 = tf.nn.relu(h_bn1)
         with tf.variable_scope(weight_key_2):
             h_bn2 = self.batch_norm(conv2d(h_out_1, W_conv_2), scale=True)
+        h_out_2 = tf.nn.relu(tf.add(h_bn2, orig))
 
         beta_key_1 = weight_key_1 + "/batch_normalization/beta:0"
         mean_key_1 = weight_key_1 + "/batch_normalization/moving_mean:0"
