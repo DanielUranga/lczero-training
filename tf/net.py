@@ -99,9 +99,13 @@ class Net:
             self.denorm_layer(self.pb.weights.ip1_val_w, self.weights)
             self.denorm_conv_block(self.pb.weights.value, self.weights)
 
-            self.denorm_layer(self.pb.weights.ip_pol_b, self.weights)
-            self.denorm_layer(self.pb.weights.ip_pol_w, self.weights)
-            self.denorm_conv_block(self.pb.weights.policy, self.weights)
+            if self.pb.format.network_format.policy == pb.NetworkFormat.POLICY_CONVOLUTION:
+                self.denorm_plain_conv(self.pb.weights.policy, self.weights)
+                self.denorm_conv_block(self.pb.weights.policy1, self.weights)
+            else:
+                self.denorm_layer(self.pb.weights.ip_pol_b, self.weights)
+                self.denorm_layer(self.pb.weights.ip_pol_w, self.weights)
+                self.denorm_conv_block(self.pb.weights.policy, self.weights)
 
             for res in reversed(self.pb.weights.residual):
                 self.denorm_conv_block(res.conv2, self.weights)
@@ -144,6 +148,9 @@ class Net:
                 raise ValueError('Unable to read version.')
             for e, line in enumerate(f):
                 weights.append(list(map(float, line.split(' '))))
+
+        self.set_networkformat(pb.NetworkFormat.NETWORK_CLASSICAL_WITH_HEADFORMAT)
+        self.set_policyformat(pb.NetworkFormat.POLICY_CONVOLUTION)
 
         self.fill_net(weights)
 
