@@ -24,6 +24,7 @@ class Net:
         self.pb.format.network_format.input = pb.NetworkFormat.INPUT_CLASSICAL_112_PLANE
         self.pb.format.network_format.output = pb.NetworkFormat.OUTPUT_CLASSICAL
         self.pb.format.network_format.policy = pb.NetworkFormat.POLICY_CONVOLUTION
+        self.pb.format.network_format.value = pb.NetworkFormat.VALUE_CLASSICAL
 
     def get_weight_amounts(self):
         return {"input": 4, "residual": 8, "head": 14}
