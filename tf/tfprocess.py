@@ -35,7 +35,7 @@ def weight_variable(shape, name=None):
     else:
         fan_in = shape[0]
         fan_out = shape[1]
-    # truncated normal has lower stddev than a regular normal distribution, so need to correct for that 
+    # truncated normal has lower stddev than a regular normal distribution, so need to correct for that
     trunc_correction = np.sqrt(1.3)
     stddev = trunc_correction * np.sqrt(2.0 / (fan_in + fan_out))
     initial = tf.truncated_normal(shape, stddev=stddev)
@@ -366,7 +366,7 @@ class TFProcess:
             leela_path = path + "-" + str(steps)
             swa_path = path + "-swa-" + str(steps)
             self.net.pb.training_params.training_steps = steps
-            self.save_leelaz_weights(leela_path) 
+            self.save_leelaz_weights(leela_path)
             print("Weights saved in file: {}".format(leela_path))
             if self.swa_enabled:
                 self.save_swa_weights(swa_path)
@@ -654,22 +654,19 @@ class TFProcess:
             flow = self.residual_block(flow, self.RESIDUAL_FILTERS)
 
         # Policy head
-        conv_pol = self.conv_block(flow, filter_size=3,
-                                   input_channels=self.RESIDUAL_FILTERS,
-                                   output_channels=self.RESIDUAL_FILTERS)
-        W_pol_conv = weight_variable([3, 3,
-                                  self.RESIDUAL_FILTERS, 80], name='W_pol_conv2')
-        b_pol_conv = bias_variable([80], name='b_pol_conv2')
-        self.weights.append(W_pol_conv)
-        self.weights.append(b_pol_conv)
-        conv_pol2 = tf.nn.bias_add(conv2d(conv_pol, W_pol_conv), b_pol_conv, data_format='NCHW')
-
-        h_conv_pol_flat = tf.reshape(conv_pol2, [-1, 80*8*8])
-        fc1_init = tf.constant(lc0_az_policy_map.make_map())
-        W_fc1 = tf.get_variable("policy_map",
-                                 initializer=fc1_init,
-                                 trainable=False)
-        h_fc1 = tf.matmul(h_conv_pol_flat, W_fc1, name='policy_head')
+        conv_pol = self.conv_block(flow, filter_size=1,
+                                       input_channels=self.RESIDUAL_FILTERS,
+                                       output_channels=self.policy_channels)
+        h_conv_pol_flat = tf.reshape(
+            conv_pol, [-1, self.policy_channels*8*8])
+        W_fc1 = weight_variable(
+            [self.policy_channels*8*8, 1858], name='fc1/weight')
+        b_fc1 = bias_variable([1858], name='fc1/bias')
+        self.weights.append(W_fc1)
+        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, b_fc1)
+        self.weights.append(b_fc1)
+        h_fc1 = tf.add(tf.matmul(h_conv_pol_flat, W_fc1),
+        b_fc1, name='policy_head')
 
         # Value head
         conv_val = self.conv_block(flow, filter_size=1,
