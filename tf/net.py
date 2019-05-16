@@ -7,7 +7,7 @@ import numpy as np
 import proto.net_pb2 as pb
 
 LC0_MAJOR = 0
-LC0_MINOR = 16
+LC0_MINOR = 21
 LC0_PATCH = 0
 WEIGHTS_MAGIC = 0x1c0
 
@@ -20,13 +20,18 @@ class Net:
         self.pb.min_version.patch = LC0_PATCH
         self.pb.format.weights_encoding = pb.Format.LINEAR16
         self.weights = []
+        self.pb.format.network_format.network = pb.NetworkFormat.NETWORK_CLASSICAL_WITH_HEADFORMAT
+        self.pb.format.network_format.input = pb.NetworkFormat.INPUT_CLASSICAL_112_PLANE
+        self.pb.format.network_format.output = pb.NetworkFormat.OUTPUT_CLASSICAL
 
+    def get_weight_amounts(self):
+        return {"input": 4, "residual": 8, "head": 14}
 
     def fill_layer(self, layer, weights):
         """Normalize and populate 16bit layer in protobuf"""
         params = np.array(weights.pop(), dtype=np.float32)
-        layer.min_val = 0 if len(params) == 1 else np.min(params)
-        layer.max_val = 1 if len(params) == 1 and np.max(params) == 0 else np.max(params)
+        layer.min_val = 0 if len(params) == 1 else float(np.min(params))
+        layer.max_val = 1 if len(params) == 1 and np.max(params) == 0 else float(np.max(params))
         params = (params - layer.min_val) / (layer.max_val - layer.min_val)
         params *= 0xffff
         params = np.round(params)
@@ -103,7 +108,7 @@ class Net:
                 self.denorm_conv_block(res.conv1, self.weights)
 
             self.denorm_conv_block(self.pb.weights.input, self.weights)
-            
+
         return self.weights
 
 
@@ -114,12 +119,14 @@ class Net:
 
     def blocks(self):
         w = self.get_weights()
-        blocks = len(w) - (4 + 14)
 
-        if blocks % 8 != 0:
+        ws = self.get_weight_amounts()
+        blocks = len(w) - (ws['input'] + ws['head'])
+
+        if blocks % ws['residual'] != 0:
             raise ValueError("Inconsistent number of weights in the file")
 
-        return blocks // 8
+        return blocks // ws['residual']
 
 
     def parse_proto(self, filename):
@@ -131,7 +138,10 @@ class Net:
         weights = []
 
         with open(filename, 'r') as f:
-            f.readline()
+            try:
+                version = int(f.readline()[0])
+            except:
+                raise ValueError('Unable to read version.')
             for e, line in enumerate(f):
                 weights.append(list(map(float, line.split(' '))))
 
@@ -140,12 +150,13 @@ class Net:
 
     def fill_net(self, weights):
         self.weights = []
-        filters = len(weights[1])
-        blocks = len(weights) - (4 + 14)
+        ws = self.get_weight_amounts()
 
-        if blocks % 8 != 0:
+        blocks = len(weights) - (ws['input'] + ws['head'])
+
+        if blocks % ws['residual'] != 0:
             raise ValueError("Inconsistent number of weights in the file")
-        blocks //= 8
+        blocks //= ws['residual']
 
         self.pb.format.weights_encoding = pb.Format.LINEAR16
         self.fill_layer(self.pb.weights.ip2_val_b, weights)
@@ -186,8 +197,8 @@ def main(argv):
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description=\
     'Convert network textfile to proto.')
-    argparser.add_argument('-i', '--input', type=str, 
+    argparser.add_argument('-i', '--input', type=str,
         help='input network weight text file')
-    argparser.add_argument('-o', '--output', type=str, 
+    argparser.add_argument('-o', '--output', type=str,
         help='output filepath without extension')
     main(argparser.parse_args())
