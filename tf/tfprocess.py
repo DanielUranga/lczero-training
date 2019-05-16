@@ -63,6 +63,7 @@ class TFProcess:
         # Network structure
         self.RESIDUAL_FILTERS = self.cfg['model']['filters']
         self.RESIDUAL_BLOCKS = self.cfg['model']['residual_blocks']
+        self.policy_channels = self.cfg['model'].get('policy_channels', 32)
 
         # For exporting
         self.weights = []
