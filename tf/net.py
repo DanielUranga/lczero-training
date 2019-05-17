@@ -47,6 +47,10 @@ class Net:
         self.fill_layer(convblock.biases, weights)
         self.fill_layer(convblock.weights, weights)
 
+    def fill_plain_conv(self, convblock, weights):
+        """Normalize and populate 16bit convblock in protobuf"""
+        self.fill_layer(convblock.biases, weights)
+        self.fill_layer(convblock.weights, weights)
 
     def denorm_layer(self, layer, weights):
         """Denormalize a layer from protobuf"""
@@ -174,9 +178,8 @@ class Net:
         self.fill_layer(self.pb.weights.ip1_val_w, weights)
         self.fill_conv_block(self.pb.weights.value, weights)
 
-        self.fill_layer(self.pb.weights.ip_pol_b, weights)
-        self.fill_layer(self.pb.weights.ip_pol_w, weights)
-        self.fill_conv_block(self.pb.weights.policy, weights)
+        self.fill_plain_conv(self.pb.weights.policy, weights)
+        self.fill_conv_block(self.pb.weights.policy1, weights)
 
         del self.pb.weights.residual[:]
         tower = []
