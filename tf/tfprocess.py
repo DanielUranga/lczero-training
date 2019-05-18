@@ -721,7 +721,7 @@ class TFProcess:
         self.weights.append(mean_2)
         self.weights.append(var_2)
 
-        h_out_2 = tf.nn.relu(tf.add(h_se, orig))
+        h_out_2 = tf.nn.relu(tf.add(h_bn2, orig))
 
         return h_out_2
 
