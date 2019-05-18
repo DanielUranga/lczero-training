@@ -69,7 +69,6 @@ class TFProcess:
         # Network structure
         self.RESIDUAL_FILTERS = self.cfg['model']['filters']
         self.RESIDUAL_BLOCKS = self.cfg['model']['residual_blocks']
-        self.SE_ratio = self.cfg['model']['se_ratio']
         self.policy_channels = self.cfg['model'].get('policy_channels', 32)
 
         policy_head = self.cfg['model'].get('policy', 'convolution')
@@ -632,36 +631,6 @@ class TFProcess:
         self.batch_norm_count += 1
         return result
 
-    def squeeze_excitation(self, x, channels, ratio):
-
-        assert channels % ratio == 0
-
-        # NCHW format reduced to NC
-        net = tf.reduce_mean(x, axis=[2, 3])
-
-        W_fc1 = weight_variable([channels, channels // ratio], name='se_fc1_w')
-        b_fc1 = bias_variable([channels // ratio], name='se_fc1_b')
-        self.weights.append(W_fc1)
-        self.weights.append(b_fc1)
-
-        net = tf.nn.relu(tf.add(tf.matmul(net, W_fc1), b_fc1))
-
-        W_fc2 = weight_variable(
-            [channels // ratio, 2 * channels], name='se_fc2_w')
-        b_fc2 = bias_variable([2 * channels], name='se_fc2_b')
-        self.weights.append(W_fc2)
-        self.weights.append(b_fc2)
-
-        net = tf.add(tf.matmul(net, W_fc2), b_fc2)
-        net = tf.reshape(net, [-1, 2 * channels, 1, 1])
-
-        # Split to scale and bias
-        gammas, betas = tf.split(net, 2, axis=1)
-
-        out = tf.nn.sigmoid(gammas) * x + betas
-
-        return out
-
     def conv_block(self, inputs, filter_size, input_channels, output_channels):
         # The weights are internal to the batchnorm layer, so apply
         # a unique scope that we can store, and use to look them back up
@@ -681,18 +650,15 @@ class TFProcess:
                     training=self.training)
         h_conv = tf.nn.relu(h_bn)
 
-        gamma_key = weight_key + "/batch_normalization/gamma:0"
         beta_key = weight_key + "/batch_normalization/beta:0"
         mean_key = weight_key + "/batch_normalization/moving_mean:0"
         var_key = weight_key + "/batch_normalization/moving_variance:0"
 
-        gamma = tf.get_default_graph().get_tensor_by_name(gamma_key)
         beta = tf.get_default_graph().get_tensor_by_name(beta_key)
         mean = tf.get_default_graph().get_tensor_by_name(mean_key)
         var = tf.get_default_graph().get_tensor_by_name(var_key)
 
         self.weights.append(W_conv)
-        self.weights.append(gamma)
         self.weights.append(beta)
         self.weights.append(mean)
         self.weights.append(var)
@@ -729,41 +695,32 @@ class TFProcess:
                     virtual_batch_size=64,
                     training=self.training)
 
-        gamma_key_1 = weight_key_1 + "/batch_normalization/gamma:0"
         beta_key_1 = weight_key_1 + "/batch_normalization/beta:0"
         mean_key_1 = weight_key_1 + "/batch_normalization/moving_mean:0"
         var_key_1 = weight_key_1 + "/batch_normalization/moving_variance:0"
 
-        gamma_1 = tf.get_default_graph().get_tensor_by_name(gamma_key_1)
         beta_1 = tf.get_default_graph().get_tensor_by_name(beta_key_1)
         mean_1 = tf.get_default_graph().get_tensor_by_name(mean_key_1)
         var_1 = tf.get_default_graph().get_tensor_by_name(var_key_1)
 
-        gamma_key_2 = weight_key_2 + "/batch_normalization/gamma:0"
         beta_key_2 = weight_key_2 + "/batch_normalization/beta:0"
         mean_key_2 = weight_key_2 + "/batch_normalization/moving_mean:0"
         var_key_2 = weight_key_2 + "/batch_normalization/moving_variance:0"
 
-        gamma_2 = tf.get_default_graph().get_tensor_by_name(gamma_key_2)
         beta_2 = tf.get_default_graph().get_tensor_by_name(beta_key_2)
         mean_2 = tf.get_default_graph().get_tensor_by_name(mean_key_2)
         var_2 = tf.get_default_graph().get_tensor_by_name(var_key_2)
 
         self.weights.append(W_conv_1)
-        self.weights.append(gamma_1)
         self.weights.append(beta_1)
         self.weights.append(mean_1)
         self.weights.append(var_1)
 
         self.weights.append(W_conv_2)
-        self.weights.append(gamma_2)
         self.weights.append(beta_2)
         self.weights.append(mean_2)
         self.weights.append(var_2)
 
-        # Must be after adding weights to self.weights
-        with tf.variable_scope(weight_key_2):
-            h_se = self.squeeze_excitation(h_bn2, channels, self.SE_ratio)
         h_out_2 = tf.nn.relu(tf.add(h_se, orig))
 
         return h_out_2
