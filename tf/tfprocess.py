@@ -686,7 +686,7 @@ class TFProcess:
         mean_key = weight_key + "/batch_normalization/moving_mean:0"
         var_key = weight_key + "/batch_normalization/moving_variance:0"
 
-        gamma = tf.Variable(tf.ones(shape=[channels]),
+        gamma = tf.Variable(tf.ones(shape=[output_channels]),
                               name=gamma_key, trainable=False)
         beta = tf.get_default_graph().get_tensor_by_name(beta_key)
         mean = tf.get_default_graph().get_tensor_by_name(mean_key)
