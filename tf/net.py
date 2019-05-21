@@ -14,7 +14,7 @@ WEIGHTS_MAGIC = 0x1c0
 
 class Net:
     def __init__(self,
-                 net=pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT,
+                 net=pb.NetworkFormat.NETWORK_CLASSICAL_WITH_HEADFORMAT,
                  input=pb.NetworkFormat.INPUT_CLASSICAL_112_PLANE,
                  value=pb.NetworkFormat.VALUE_CLASSICAL,
                  policy=pb.NetworkFormat.POLICY_CLASSICAL):

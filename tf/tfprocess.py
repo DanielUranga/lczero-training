@@ -765,7 +765,8 @@ class TFProcess:
         mean_key_2 = weight_key_2 + "/batch_normalization/moving_mean:0"
         var_key_2 = weight_key_2 + "/batch_normalization/moving_variance:0"
 
-        gamma_2 = tf.get_default_graph().get_tensor_by_name(gamma_key_2)
+        gamma_2 = tf.Variable(tf.ones(shape=[channels]),
+                              name=gamma_key_2, trainable=False)
         beta_2 = tf.get_default_graph().get_tensor_by_name(beta_key_2)
         mean_2 = tf.get_default_graph().get_tensor_by_name(mean_key_2)
         var_2 = tf.get_default_graph().get_tensor_by_name(var_key_2)
@@ -782,10 +783,7 @@ class TFProcess:
         self.weights.append(mean_2)
         self.weights.append(var_2)
 
-        # Must be after adding weights to self.weights
-        with tf.variable_scope(weight_key_2):
-            h_se = self.squeeze_excitation(h_bn2, channels, self.SE_ratio)
-        h_out_2 = tf.nn.relu(tf.add(h_se, orig))
+        h_out_2 = tf.nn.relu(tf.add(h_bn2, orig))
 
         return h_out_2
 
