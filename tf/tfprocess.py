@@ -686,7 +686,8 @@ class TFProcess:
         mean_key = weight_key + "/batch_normalization/moving_mean:0"
         var_key = weight_key + "/batch_normalization/moving_variance:0"
 
-        gamma = tf.get_default_graph().get_tensor_by_name(gamma_key)
+        gamma = tf.Variable(tf.ones(shape=[channels]),
+                              name=gamma_key, trainable=False)
         beta = tf.get_default_graph().get_tensor_by_name(beta_key)
         mean = tf.get_default_graph().get_tensor_by_name(mean_key)
         var = tf.get_default_graph().get_tensor_by_name(var_key)
@@ -734,7 +735,8 @@ class TFProcess:
         mean_key_1 = weight_key_1 + "/batch_normalization/moving_mean:0"
         var_key_1 = weight_key_1 + "/batch_normalization/moving_variance:0"
 
-        gamma_1 = tf.get_default_graph().get_tensor_by_name(gamma_key_1)
+        gamma_1 = tf.Variable(tf.ones(shape=[channels]),
+                              name=gamma_key_1, trainable=False)
         beta_1 = tf.get_default_graph().get_tensor_by_name(beta_key_1)
         mean_1 = tf.get_default_graph().get_tensor_by_name(mean_key_1)
         var_1 = tf.get_default_graph().get_tensor_by_name(var_key_1)
@@ -744,7 +746,8 @@ class TFProcess:
         mean_key_2 = weight_key_2 + "/batch_normalization/moving_mean:0"
         var_key_2 = weight_key_2 + "/batch_normalization/moving_variance:0"
 
-        gamma_2 = tf.get_default_graph().get_tensor_by_name(gamma_key_2)
+        gamma_2 = tf.Variable(tf.ones(shape=[channels]),
+                              name=gamma_key_2, trainable=False)
         beta_2 = tf.get_default_graph().get_tensor_by_name(beta_key_2)
         mean_2 = tf.get_default_graph().get_tensor_by_name(mean_key_2)
         var_2 = tf.get_default_graph().get_tensor_by_name(var_key_2)
@@ -764,7 +767,7 @@ class TFProcess:
         # Must be after adding weights to self.weights
         with tf.variable_scope(weight_key_2):
             h_se = self.squeeze_excitation(h_bn2, channels, self.SE_ratio)
-        h_out_2 = tf.nn.relu(tf.add(h_se, orig))
+        h_out_2 = tf.nn.relu(tf.add(h_bn2, orig))
 
         return h_out_2
 
