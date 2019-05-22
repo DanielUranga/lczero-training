@@ -56,14 +56,12 @@ class Net:
     def get_weight_amounts(self):
         value_weights = 8
         policy_weights = 6
-        head_weights = value_weights + policy_weights
-        # if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
-        # Batch norm gammas in head convolutions.
-        head_weights += 2
+        # Plus 2 because batch norm gammas in head convolutions.
+        head_weights = value_weights + policy_weights + 2
         if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
             return {"input": 5, "residual": 14, "head": head_weights}
         else:
-            return {"input": 4, "residual": 10, "head": head_weights}
+            return {"input": 5, "residual": 10, "head": head_weights}
 
     def fill_layer(self, layer, weights):
         """Normalize and populate 16bit layer in protobuf"""
