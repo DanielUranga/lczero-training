@@ -112,19 +112,11 @@ class Net:
 
     def denorm_conv_block(self, convblock, weights):
         """Denormalize a convblock from protobuf"""
-        se = self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT
-
-        if se:
-            self.denorm_layer(convblock.bn_stddivs, weights)
-            self.denorm_layer(convblock.bn_means, weights)
-            self.denorm_layer(convblock.bn_betas, weights)
-            self.denorm_layer(convblock.bn_gammas, weights)
-            self.denorm_layer(convblock.weights, weights)
-        else:
-            self.denorm_layer(convblock.bn_stddivs, weights)
-            self.denorm_layer(convblock.bn_means, weights)
-            self.denorm_layer(convblock.biases, weights)
-            self.denorm_layer(convblock.weights, weights)
+        self.denorm_layer(convblock.bn_stddivs, weights)
+        self.denorm_layer(convblock.bn_means, weights)
+        self.denorm_layer(convblock.bn_betas, weights)
+        self.denorm_layer(convblock.bn_gammas, weights)
+        self.denorm_layer(convblock.weights, weights)
 
     def denorm_plain_conv(self, convblock, weights):
         """Denormalize a plain convolution from protobuf"""
