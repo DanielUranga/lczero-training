@@ -699,7 +699,7 @@ class TFProcess:
                     virtual_batch_size=64,
                     training=self.training)
 
-        gamma_key_1 = weight_key_1 + "/batch_normalization/gamma:0"
+        gamma_key_1 = weight_key_1 + "/batch_normalization/gamma"
         beta_key_1 = weight_key_1 + "/batch_normalization/beta:0"
         mean_key_1 = weight_key_1 + "/batch_normalization/moving_mean:0"
         var_key_1 = weight_key_1 + "/batch_normalization/moving_variance:0"
@@ -710,7 +710,7 @@ class TFProcess:
         mean_1 = tf.get_default_graph().get_tensor_by_name(mean_key_1)
         var_1 = tf.get_default_graph().get_tensor_by_name(var_key_1)
 
-        gamma_key_2 = weight_key_2 + "/batch_normalization/gamma:0"
+        gamma_key_2 = weight_key_2 + "/batch_normalization/gamma"
         beta_key_2 = weight_key_2 + "/batch_normalization/beta:0"
         mean_key_2 = weight_key_2 + "/batch_normalization/moving_mean:0"
         var_key_2 = weight_key_2 + "/batch_normalization/moving_variance:0"
