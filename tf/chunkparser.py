@@ -192,10 +192,10 @@ class ChunkParser:
         assert len(planes) == ((8*13*1 + 8*1*1) * 8 * 8 * 4)
         winner = float(winner)
         assert winner == 1.0 or winner == -1.0 or winner == 0.0
-        winner = struct.pack('fff', winner, winner, winner)
-        best_q = struct.pack('fff', q, q, q)
+        winner = struct.pack('f', winner)
+        q = struct.pack('f', q)
 
-        return (planes, probs, winner, best_q)
+        return (planes, probs, winner, q)
 
 
     def sample_record(self, chunkdata):
