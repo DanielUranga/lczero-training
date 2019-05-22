@@ -127,7 +127,7 @@ class ChunkParser:
             uint8 rule50_count (1 byte)
             uint8 move_count (1 byte)
             int8 result (1 byte)
-            float32 q (4 bytes)
+            float32 q (1 bytes)
         """
         self.v4_struct = struct.Struct(V4_STRUCT_STRING)
         self.v3_struct = struct.Struct(V3_STRUCT_STRING)
@@ -145,8 +145,8 @@ class ChunkParser:
 
         planes = tf.reshape(planes, (ChunkParser.BATCH_SIZE, 112, 8*8))
         probs = tf.reshape(probs, (ChunkParser.BATCH_SIZE, 1858))
-        winner = tf.reshape(winner, (ChunkParser.BATCH_SIZE, 3))
-        q = tf.reshape(q, (ChunkParser.BATCH_SIZE, 3))
+        winner = tf.reshape(winner, (ChunkParser.BATCH_SIZE, 1))
+        q = tf.reshape(q, (ChunkParser.BATCH_SIZE, 1))
 
         return (planes, probs, winner, q)
 
@@ -167,7 +167,7 @@ class ChunkParser:
             uint8 rule50_count (1 byte)
             uint8 move_count (1 byte)
             int8 result (1 byte)
-            float32 q (4 bytes)
+            float32 q (1 bytes)
         """
         (ver, probs, planes, us_ooo, us_oo, them_ooo, them_oo, stm, rule50_count, move_count, winner, q) = self.v4_struct.unpack(content)
         # Enforce move_count to 0
