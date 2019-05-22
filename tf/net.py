@@ -63,7 +63,7 @@ class Net:
         if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
             return {"input": 5, "residual": 14, "head": head_weights}
         else:
-            return {"input": 4, "residual": 8, "head": head_weights}
+            return {"input": 4, "residual": 10, "head": head_weights}
 
     def fill_layer(self, layer, weights):
         """Normalize and populate 16bit layer in protobuf"""
