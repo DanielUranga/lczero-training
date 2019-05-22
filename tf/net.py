@@ -57,9 +57,9 @@ class Net:
         value_weights = 8
         policy_weights = 6
         head_weights = value_weights + policy_weights
-        if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
-            # Batch norm gammas in head convolutions.
-            head_weights += 2
+        # if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
+        # Batch norm gammas in head convolutions.
+        head_weights += 2
         if self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT:
             return {"input": 5, "residual": 14, "head": head_weights}
         else:
@@ -265,7 +265,7 @@ class Net:
         self.weights = []
         # Batchnorm gammas in ConvBlock?
         se = self.pb.format.network_format.network == pb.NetworkFormat.NETWORK_SE_WITH_HEADFORMAT
-        gammas = se
+        gammas = True
 
         ws = self.get_weight_amounts()
 
