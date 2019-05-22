@@ -148,6 +148,7 @@ class TFProcess:
         assert 0 <= q_ratio <= 1
         target = self.q_ * q_ratio + self.z_ * (1 - q_ratio)
         self.value_loss = tf.constant(0)
+        self.mse_loss = tf.reduce_mean(tf.squared_difference(target, self.z_conv))
 
         # Regularizer
         regularizer = tf.contrib.layers.l2_regularizer(scale=0.0001)
@@ -159,10 +160,7 @@ class TFProcess:
         # want to reduce the factor in front of self.mse_loss here.
         pol_loss_w = self.cfg['training']['policy_loss_weight']
         val_loss_w = self.cfg['training']['value_loss_weight']
-        if self.wdl:
-            value_loss = self.value_loss
-        else:
-            value_loss = self.mse_loss
+        value_loss = self.mse_loss
         loss = pol_loss_w * self.policy_loss + \
             val_loss_w * value_loss + self.reg_term
 
