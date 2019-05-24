@@ -28,7 +28,7 @@ import unittest
 
 V4_VERSION = struct.pack('i', 4)
 V3_VERSION = struct.pack('i', 3)
-V4_STRUCT_STRING = '4s7432s832sBBBBBBBbffff'
+V4_STRUCT_STRING = '4s7432s832sBBBBBBBbf'
 V3_STRUCT_STRING = '4s7432s832sBBBBBBBb'
 
 # Interface for a chunk data source.
@@ -175,7 +175,7 @@ class ChunkParser:
             float32 root_d (4 bytes)
             float32 best_d (4 bytes)
         """
-        (ver, probs, planes, us_ooo, us_oo, them_ooo, them_oo, stm, rule50_count, move_count, winner, root_q, best_q, root_d, best_d) = self.v4_struct.unpack(content)
+        (ver, probs, planes, us_ooo, us_oo, them_ooo, them_oo, stm, rule50_count, move_count, winner, q) = self.v4_struct.unpack(content)
         # Enforce move_count to 0
         move_count = 0
 
@@ -200,6 +200,8 @@ class ChunkParser:
         assert winner == 1.0 or winner == -1.0 or winner == 0.0
         winner = struct.pack('fff', winner == 1.0, winner == 0.0, winner == -1.0)
 
+        best_q = float(q)
+        best_d = 0.0
         best_q_w = 0.5 * (1.0 - best_d + best_q)
         best_q_l = 0.5 * (1.0 - best_d - best_q)
         best_q = struct.pack('fff', best_q_w, best_d, best_q_l)
@@ -376,7 +378,7 @@ class ChunkParserTest(unittest.TestCase):
         parser = ChunkParser(ChunkDataSrc(records), shuffle_size=1, workers=1, batch_size=batch_size)
         batchgen = parser.parse()
         data = next(batchgen)
-        
+
         batch = ( np.reshape(np.frombuffer(data[0], dtype=np.float32), (batch_size, 112, 64)),
                   np.reshape(np.frombuffer(data[1], dtype=np.int32), (batch_size, 1858)),
                   np.reshape(np.frombuffer(data[2], dtype=np.float32), (batch_size, 3)),
